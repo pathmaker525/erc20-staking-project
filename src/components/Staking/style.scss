@@ -1,6 +1,6 @@
 @import "../../styles/variable.scss";
 
-.multisender {
+.staking {
   width: 100%;
   min-height: calc(100vh - 228px);
   justify-content: center;
@@ -131,23 +131,4 @@
       }
     }
   }
-}
-
-.cm {
-  &-gutters {
-    width: 48px;
-  }
-
-  &-lineNumbers {
-    min-width: 42px;
-  }
-
-  &-activeLine {
-    background-color: transparent !important;
-  }
-}
-
-.ͼo {
-  color: $gray;
-  background-color: $black;
 }
