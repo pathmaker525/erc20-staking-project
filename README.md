@@ -1,1 +1,1 @@
-# MultiSender in SaFuTrendz
+# Staking in SaFuTrendz
