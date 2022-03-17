@@ -1,0 +1,153 @@
+@import "../../styles/variable.scss";
+
+.multisender {
+  width: 100%;
+  min-height: calc(100vh - 228px);
+  justify-content: center;
+
+  &-wrapper {
+    align-items: center;
+    justify-content: center;
+    margin-top: 64px;
+    padding: 48px 0 128px;
+
+    & > div {
+      display: flex;
+      width: 100%;
+      justify-content: center;
+
+      & > h1 {
+        color: $yellow !important;
+        text-align: center;
+      }
+    }
+  }
+
+  &-main {
+    width: 100%;
+    max-width: 640px;
+    grid-row-gap: 16px;
+
+    & > div {
+      width: 100%;
+      align-items: center;
+    }
+
+    &-settings {
+      width: 100%;
+      grid-template: auto / 1fr 1fr;
+      grid-column-gap: 16px;
+      grid-row-gap: 4px;
+
+      & > span {
+        font-size: 14px;
+        color: $gray;
+
+        @media (max-width: 768px) {
+          font-size: 12px;
+        }
+
+        &:nth-child(2) {
+          justify-self: flex-end;
+        }
+      }
+
+      &-input {
+        position: relative;
+        width: 100%;
+        grid-column-start: 1;
+        grid-column-end: 3;
+        align-items: center;
+
+        & > svg {
+          position: absolute;
+          width: 18px;
+          height: auto;
+          height: intrinsic;
+          left: 8px;
+          color: $gray;
+        }
+
+        & > input {
+          width: 100%;
+          padding: 8px 12px 8px 32px;
+          color: $white;
+          background-color: $black;
+        }
+      }
+    }
+
+    &-editor {
+      width: 100%;
+      grid-template: auto / 1fr 1fr;
+      grid-column-gap: 16px;
+      grid-row-gap: 4px;
+
+      & > span {
+        font-size: 14px;
+        color: $gray;
+
+        @media (max-width: 768px) {
+          font-size: 12px;
+        }
+
+        &:nth-child(2) {
+          justify-self: flex-end;
+        }
+      }
+
+      & > input {
+        margin: 4px 0 0 0;
+      }
+
+      &-main {
+        width: 100%;
+        font-size: 12px;
+        overflow: hidden;
+        grid-column-start: 1;
+        grid-column-end: 3;
+      }
+    }
+
+    &-send {
+      & > button {
+        width: 100%;
+        font-weight: 600;
+        padding: 12px 16px;
+        background-image: linear-gradient(135deg, $yellow, $orange);
+        border-radius: 8px;
+        border: none;
+        cursor: pointer;
+        box-shadow: 0 0 8px rgba($color: $orange, $alpha: 0.4);
+        transition: 0.3s;
+
+        &:hover {
+          box-shadow: 0 4px 16px rgba($color: $yellow, $alpha: 0.7);
+        }
+
+        &:active {
+          box-shadow: 0 4px 8px rgba($color: $yellow, $alpha: 0.7);
+        }
+      }
+    }
+  }
+}
+
+.cm {
+  &-gutters {
+    width: 48px;
+  }
+
+  &-lineNumbers {
+    min-width: 42px;
+  }
+
+  &-activeLine {
+    background-color: transparent !important;
+  }
+}
+
+.ͼo {
+  color: $gray;
+  background-color: $black;
+}
