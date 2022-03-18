@@ -9,7 +9,17 @@ const Staking = () => {
 
   const [txStatus, setTxStatus] = useState(false)
 
+  const [lockDate, setLockDate] = useState(30)
+
   const { account, library } = useWeb3React()
+
+  const onChangeLockDate = (e) => {
+    const date = e.target.name
+
+    console.log(typeof date, date, typeof parseInt(date))
+
+    setLockDate(parseInt(date))
+  }
 
   const alertInfo = (message) =>
     alert.info(message, {
@@ -32,7 +42,14 @@ const Staking = () => {
       },
     })
 
-  return <StakingComponent />
+  return (
+    <StakingComponent
+      account={account}
+      txStatus={txStatus}
+      lockDate={lockDate}
+      onChangeLockDate={onChangeLockDate}
+    />
+  )
 }
 
 export default Staking

@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.11;
-
 /**
- * ███╗   ███╗██╗   ██╗██╗  ████████╗██╗   ███████╗███████╗███╗   ██╗██████╗ ███████╗██████╗ 
- * ████╗ ████║██║   ██║██║  ╚══██╔══╝██║   ██╔════╝██╔════╝████╗  ██║██╔══██╗██╔════╝██╔══██╗
- * ██╔████╔██║██║   ██║██║     ██║   ██║   ███████╗█████╗  ██╔██╗ ██║██║  ██║█████╗  ██████╔╝
- * ██║╚██╔╝██║██║   ██║██║     ██║   ██║   ╚════██║██╔══╝  ██║╚██╗██║██║  ██║██╔══╝  ██╔══██╗
- * ██║ ╚═╝ ██║╚██████╔╝███████╗██║   ██║██╗███████║███████╗██║ ╚████║██████╔╝███████╗██║  ██║
- * ╚═╝     ╚═╝ ╚═════╝ ╚══════╝╚═╝   ╚═╝╚═╝╚══════╝╚══════╝╚═╝  ╚═══╝╚═════╝ ╚══════╝╚═╝  ╚═╝
+ * ███████╗ █████╗ ███████╗██╗   ██╗   ███████╗████████╗ █████╗ ██╗  ██╗██╗███╗   ██╗ ██████╗ 
+ * ██╔════╝██╔══██╗██╔════╝██║   ██║   ██╔════╝╚══██╔══╝██╔══██╗██║ ██╔╝██║████╗  ██║██╔════╝ 
+ * ███████╗███████║█████╗  ██║   ██║   ███████╗   ██║   ███████║█████╔╝ ██║██╔██╗ ██║██║  ███╗
+ * ╚════██║██╔══██║██╔══╝  ██║   ██║   ╚════██║   ██║   ██╔══██║██╔═██╗ ██║██║╚██╗██║██║   ██║
+ * ███████║██║  ██║██║     ╚██████╔╝██╗███████║   ██║   ██║  ██║██║  ██╗██║██║ ╚████║╚██████╔╝
+ * ╚══════╝╚═╝  ╚═╝╚═╝      ╚═════╝ ╚═╝╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝ ╚═════╝ 
  */
+
+pragma solidity ^0.8.11;
 
 library Address {
     /**
@@ -390,6 +390,73 @@ interface IERC20Metadata is IERC20 {
     function decimals() external view returns (uint8);
 }
 
+library SafeMath {
+    function add(uint256 a, uint256 b) internal pure returns (uint256) {
+        uint256 c = a + b;
+        require(c >= a, "SafeMath: addition overflow");
+
+        return c;
+    }
+
+    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
+        return sub(a, b, "SafeMath: subtraction overflow");
+    }
+
+    function sub(
+        uint256 a,
+        uint256 b,
+        string memory errorMessage
+    ) internal pure returns (uint256) {
+        require(b <= a, errorMessage);
+        uint256 c = a - b;
+
+        return c;
+    }
+
+    function mul(uint256 a, uint256 b) internal pure returns (uint256) {
+        // Gas optimization: this is cheaper than requiring 'a' not being zero, but the
+        // benefit is lost if 'b' is also tested.
+        // See: https://github.com/OpenZeppelin/openzeppelin-contracts/pull/522
+        if (a == 0) {
+            return 0;
+        }
+
+        uint256 c = a * b;
+        require(c / a == b, "SafeMath: multiplication overflow");
+
+        return c;
+    }
+
+    function div(uint256 a, uint256 b) internal pure returns (uint256) {
+        return div(a, b, "SafeMath: division by zero");
+    }
+
+    function div(
+        uint256 a,
+        uint256 b,
+        string memory errorMessage
+    ) internal pure returns (uint256) {
+        require(b > 0, errorMessage);
+        uint256 c = a / b;
+        // assert(a == b * c + a % b); // There is no case in which this doesn't hold
+
+        return c;
+    }
+
+    function mod(uint256 a, uint256 b) internal pure returns (uint256) {
+        return mod(a, b, "SafeMath: modulo by zero");
+    }
+
+    function mod(
+        uint256 a,
+        uint256 b,
+        string memory errorMessage
+    ) internal pure returns (uint256) {
+        require(b != 0, errorMessage);
+        return a % b;
+    }
+}
+
 library SafeERC20 {
     using Address for address;
 
@@ -500,161 +567,258 @@ library TransferHelper {
     }
 }
 
-contract MultiSender is Ownable {
-  using Address for address;
-  using SafeERC20 for IERC20;
+contract SAFUstake is Ownable {
+    using Address for address;
+    using SafeMath for uint256;
+    using SafeERC20 for IERC20;
 
-  struct TokenInfo {
-    string name;
-    string symbol;
-    uint256 decimal;
-  }
+    IERC20 public stakeToken;
+    IERC20 public rewardToken;
+    IERC20 public token3;
 
-  address public tokenAddressForDistribution;
-  TokenInfo public tokenInfo;
+    uint256 public maxStakeableToken;
+    uint256 public minimumStakeToken;
+    uint256 public totalUnStakedToken;
+    uint256 public totalStakedToken;
+    uint256 public totalClaimedRewardToken;
+    uint256 public totalStakers;
+    uint256 public percentDivider;
 
-  uint256 private _serviceFee = 0.25 ether;
+    uint256[4] public Duration = [30 days, 60 days, 90 days, 180 days];
+    uint256[4] public Bonus = [60, 130, 200, 450];
 
-  address[] private _arrayInitiator;
-  address[] private _receivers;
-  mapping(address => uint256) public multiSendingInfo;
-
-  constructor () {}
-
-  /** 
-   * @dev Send tokens to multiple address with amount passed in amounts_ array
-   * from the contract. Tokens need to be deposited to the contract to be sent
-   * by the contract.
-   *
-   * @param tokenAddress_ Token address to be sent
-   * @param receivers_ Address list to receive token specified by the address
-   * @param amounts_ Token amounts to be sent to each addresses
-   */
-  function multiSendTokenFromContractAt(address tokenAddress_, address[] memory receivers_, uint256[] memory amounts_) public onlyOwner {
-    require(tokenAddress_ != address(0), "MultiSender: Address can't be zero address");
-    require(tokenAddress_ != address(this), "MultiSender: Can't set as self address");
-    require(IERC20(tokenAddress_).balanceOf(address(this)) > 0, "MultiSender: Insufficient tokens to send");
-    require(receivers_.length > 0, "MultiSender: Receiver length should be greater than zero");
-    require(receivers_.length == amounts_.length, "MultiSender: Receiver length should be same as amounts length");
-
-    uint256 totalSupplyToDistribute = 0;
-    for (uint256 i = 0; i < receivers_.length; i++) {
-      totalSupplyToDistribute += amounts_[i];
+    struct Stake {
+        uint256 unstaketime;
+        uint256 staketime;
+        uint256 amount;
+        uint256 rewardTokenAmount;
+        uint256 reward;
+        uint256 lastharvesttime;
+        uint256 remainingreward;
+        uint256 harvestreward;
+        uint256 persecondreward;
+        bool withdrawan;
+        bool unstaked;
     }
 
-    require(IERC20(tokenAddress_).balanceOf(address(this)) >= totalSupplyToDistribute, "MultiSender: Insufficient tokens to send");
-
-    for (uint256 i = 0; i < receivers_.length; i++) {
-      TransferHelper.safeTransfer(address(tokenAddressForDistribution), address(receivers_[i]), amounts_[i]);
-    }
-  }
-
-  /** 
-   * @dev Send tokens to multiple address with amount passed in amounts_ array
-   * from the wallet linked to the contract. Tokens need to be deposited to th
-   * e contract to be sent by the contract.
-   *
-   * [===== IMPORTANT =====]
-   * Need to increase allowance between wallet and the contract from the token
-   * smart contract
-   *
-   * @param tokenAddress_ Token address to be sent
-   * @param receivers_ Address list to receive token specified by the address
-   * @param amounts_ Token amounts to be sent to each addresses
-   */
-  function multiSendTokensFromWalletAt(address tokenAddress_, address[] memory receivers_, uint256[] memory amounts_) public payable {
-    require(_msgValue() > _serviceFee, "MultiSender: Must pay appropreate fee");
-    require(tokenAddress_ != address(0), "MultiSender: Address can't be zero address");
-    require(tokenAddress_ != address(this), "MultiSender: Can't set as self address");
-    require(IERC20(tokenAddress_).balanceOf(_msgSender()) > 0, "MultiSender: Insufficient tokens to send");
-    require(receivers_.length > 0, "MultiSender: Receiver length should be greater than zero");
-    require(receivers_.length == amounts_.length, "MultiSender: Receiver length should be same as amounts length");
-
-    uint256 totalSupplyToDistribute = 0;
-    for (uint256 i = 0; i < receivers_.length; i++) {
-      totalSupplyToDistribute += amounts_[i];
+    struct User {
+        uint256 totalStakedTokenUser;
+        uint256 totalUnstakedTokenUser;
+        uint256 totalClaimedRewardTokenUser;
+        uint256 stakeCount;
+        bool alreadyExists;
     }
 
-    require(IERC20(tokenAddress_).balanceOf(_msgSender()) >= totalSupplyToDistribute, "MultiSender: Insufficient tokens to send");
+    mapping(address => User) public Stakers;
+    mapping(uint256 => address) public StakersID;
+    mapping(address => mapping(uint256 => Stake)) public stakersRecord;
 
-    for (uint256 i = 0; i < receivers_.length; i++) {
-      TransferHelper.safeTransferFrom(address(tokenAddressForDistribution), address(_msgSender()), address(receivers_[i]), amounts_[i]);
+    event STAKE(address Staker, uint256 amount);
+    event HARVEST(address Staker, uint256 amount);
+    event UNSTAKE(address Staker, uint256 amount);
+
+    constructor(address payable _owner, address token1, address token2) {
+        stakeToken = IERC20(token1);
+        rewardToken = IERC20(token2);
+        maxStakeableToken = stakeToken.totalSupply();
+        percentDivider = 1000;
+        minimumStakeToken = 1e9;
     }
-  }
 
+    function stake(uint256 amount, uint256 timeperiod) public {
+        require(timeperiod >= 0 && timeperiod <= 3, "Invalid Time Period");
+        require(amount >= minimumStakeToken, "stake more than minimum amount");
+        uint256 BRISEVAL = getPriceinUSD();
+        uint256 rewardtokenPrice = (amount.mul(BRISEVAL)).div(1e9);
+        if (!Stakers[msg.sender].alreadyExists) {
+            Stakers[msg.sender].alreadyExists = true;
+            StakersID[totalStakers] = msg.sender;
+            totalStakers++;
+        }
 
+        stakeToken.transferFrom(msg.sender, address(this), amount);
 
-  function addReceiver(address to_, uint256 amount_) public onlyOwner {
-    require(to_ != address(0), "MultiSender: Can't send to zero address");
-    require(to_ != address(this), "MultiSender: Can't send to self address");
-    require(amount_ > 0, "MultiSender: Amount should be greater than zero");
+        uint256 index = Stakers[msg.sender].stakeCount;
+        Stakers[msg.sender].totalStakedTokenUser = Stakers[msg.sender]
+            .totalStakedTokenUser
+            .add(amount);
+        totalStakedToken = totalStakedToken.add(amount);
+        stakersRecord[msg.sender][index].unstaketime = block.timestamp.add(
+            Duration[timeperiod]
+        );
+        stakersRecord[msg.sender][index].staketime = block.timestamp;
+        stakersRecord[msg.sender][index].amount = amount;
+        stakersRecord[msg.sender][index].reward = rewardtokenPrice
+            .mul(Bonus[timeperiod])
+            .div(percentDivider);
+        stakersRecord[msg.sender][index].persecondreward = stakersRecord[
+            msg.sender
+        ][index].reward.div(Duration[timeperiod]);
 
-    _receivers.push(to_);
-    multiSendingInfo[to_] = amount_;
-  }
+        stakersRecord[msg.sender][index].rewardTokenAmount = rewardtokenPrice;
+        stakersRecord[msg.sender][index].lastharvesttime = 0;
+        stakersRecord[msg.sender][index].remainingreward = stakersRecord[msg.sender][index].reward;
+        stakersRecord[msg.sender][index].harvestreward = 0;
+        Stakers[msg.sender].stakeCount++;
 
-  function addReceivers(address[] memory receivers_, uint256[] memory amounts_) public onlyOwner {
-    require(receivers_.length > 0, "MultiSender: Address list should be greater than zero");
-    require(receivers_.length == amounts_.length, "MultiSender: Need to have same length of tos and amounts");
-
-    for (uint256 i = 0; i < receivers_.length; i++) {
-      _receivers.push(receivers_[i]);
-      multiSendingInfo[receivers_[i]] = amounts_[i];
+        emit STAKE(msg.sender, amount);
     }
-  }
 
-  function initAddressList() public onlyOwner {
-    // This overwrite is not for gas saving solution
-    _receivers = _arrayInitiator;
-  }
+    function unstake(uint256 index) public {
+        require(!stakersRecord[msg.sender][index].unstaked, "already unstaked");
+        require(stakersRecord[msg.sender][index].unstaketime < block.timestamp, "cannot unstake before lock duration");
 
-  function distributeTokens() public onlyOwner {
-    require(_receivers.length > 0, "MultiSender: Don't have addresses to send tokens");
+        if(!stakersRecord[msg.sender][index].withdrawan){
+            harvest(index);
+        }
+        stakersRecord[msg.sender][index].unstaked = true;
 
-    for (uint256 i = 0; i < _receivers.length; i++) {
-      TransferHelper.safeTransfer(address(tokenAddressForDistribution), address(_receivers[i]), multiSendingInfo[_receivers[i]]);
+        stakeToken.transfer(msg.sender, stakersRecord[msg.sender][index].amount);
+        
+        totalUnStakedToken = totalUnStakedToken.add(
+            stakersRecord[msg.sender][index].amount
+        );
+        Stakers[msg.sender].totalUnstakedTokenUser = Stakers[msg.sender]
+            .totalUnstakedTokenUser
+            .add(stakersRecord[msg.sender][index].amount);
+
+        emit UNSTAKE(
+            msg.sender,
+            stakersRecord[msg.sender][index].amount
+        );
     }
-  }
 
-  function setTokenForDistribution (address newAddress_) public onlyOwner {
-    require(newAddress_ != address(0), "MultiSender: Address can't be zero address");
-    require(newAddress_ != address(this), "MultiSender: Can't set as self address");
-    
-    tokenAddressForDistribution = newAddress_;
+    function harvest(uint256 index) public {
+        require(!stakersRecord[msg.sender][index].withdrawan, "already withdrawan");
+        require(!stakersRecord[msg.sender][index].unstaked, "already unstaked");
+        
+        uint256 rewardTillNow;
+        uint256 commontimestamp;
+        (rewardTillNow,commontimestamp) = realtimeRewardPerBlock(msg.sender , index);
+        stakersRecord[msg.sender][index].lastharvesttime =  commontimestamp;
+        rewardToken.transfer(
+            msg.sender,
+            rewardTillNow
+        );
+        totalClaimedRewardToken = totalClaimedRewardToken.add(
+            rewardTillNow
+        );
+        stakersRecord[msg.sender][index].remainingreward = stakersRecord[msg.sender][index].remainingreward.sub(rewardTillNow);
+        stakersRecord[msg.sender][index].harvestreward = stakersRecord[msg.sender][index].harvestreward.add(rewardTillNow);
+        Stakers[msg.sender].totalClaimedRewardTokenUser = Stakers[msg.sender]
+            .totalClaimedRewardTokenUser
+            .add(rewardTillNow);
 
-    tokenInfo.name = IERC20Metadata(tokenAddressForDistribution).name();
-    tokenInfo.symbol = IERC20Metadata(tokenAddressForDistribution).symbol();
-    tokenInfo.decimal = IERC20Metadata(tokenAddressForDistribution).decimals();
-  }
+        if(stakersRecord[msg.sender][index].harvestreward == stakersRecord[msg.sender][index].reward){
+            stakersRecord[msg.sender][index].withdrawan = true;
 
-  function getTokenSupplyForDistrubution () public view returns (uint256) {
-    return IERC20(tokenAddressForDistribution).balanceOf(address(this));
-  }
+        }
 
-  function serviceFee() public view returns (uint256) {
-    return _serviceFee;
-  }
+        emit HARVEST(
+            msg.sender,
+            rewardTillNow
+        );
+    }
 
-  function setServiceFee(uint256 fee_) public onlyOwner {
-    require(fee_ < 1 ether, "MultiSender: Too greedy");
+    function getPriceinUSD() public view returns (uint256){
+        
+        address BUSD_WBNB = 0x58F876857a02D6762E0101bb5C46A8c1ED44Dc16;
+        
+        IERC20 BUSDTOKEN = IERC20(0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56);
+        IERC20 WBNBTOKEN = IERC20(0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c);
+        
+        uint256 BUSDSUPPLYINBUSD_WBNB = BUSDTOKEN.balanceOf(BUSD_WBNB);
+        uint256 WBNBSUPPLYINBUSD_WBNB = WBNBTOKEN.balanceOf(BUSD_WBNB);
+        
+        uint256 BNBPRICE = (BUSDSUPPLYINBUSD_WBNB.mul(1e18)).div(WBNBSUPPLYINBUSD_WBNB);
 
-    _serviceFee = fee_;
-  }
+        address BRISE_WBNB = 0x7DD308207c0e700466CAfda79f0218D898c211F8;
+        IERC20 BRISETOKEN = IERC20(0x8FFf93E810a2eDaaFc326eDEE51071DA9d398E83);
 
-  function reClaimCoin (address to_) public onlyOwner {
-      require(to_ != address(0), "MultiSender: claim to the zero address");
+        uint256 WBNBSUPPLYINBRISE_WBNB =(WBNBTOKEN.balanceOf(BRISE_WBNB));
+        uint256 BRISESUPPLYINBRISE_WBNB = (BRISETOKEN.balanceOf(BRISE_WBNB));
 
-      payable(to_).transfer(address(this).balance);
-  }
+        uint256 BRISEUSDVAL = (((WBNBSUPPLYINBRISE_WBNB.mul(1e9)).div((BRISESUPPLYINBRISE_WBNB))).mul(BNBPRICE)).div(1e18);
+        return BRISEUSDVAL;
+    }
 
-  function reClaimToken (address token_, address to_) public onlyOwner {
-      require(to_ != address(0), "MultiSender: claim to the zero address");
-      require(token_ != address(0), "MultiSender: claim to the zero address");
-      require(token_ != address(this), "MultiSender: self withdraw");
+    function realtimeRewardPerBlock(address user, uint256 blockno) public view returns (uint256,uint256) {
+        uint256 ret;
+        uint256 commontimestamp;
+            if (
+                !stakersRecord[user][blockno].withdrawan &&
+                !stakersRecord[user][blockno].unstaked
+            ) {
+                uint256 val;
+                uint256 tempharvesttime = stakersRecord[user][blockno].lastharvesttime;
+                commontimestamp = block.timestamp;
+                if(tempharvesttime == 0){
+                    tempharvesttime = stakersRecord[user][blockno].staketime;
+                }
+                val = commontimestamp - tempharvesttime;
+                val = val.mul(stakersRecord[user][blockno].persecondreward);
+                if (val < stakersRecord[user][blockno].remainingreward) {
+                    ret += val;
+                } else {
+                    ret += stakersRecord[user][blockno].remainingreward;
+                }
+            }
+        return (ret,commontimestamp);
+    }
 
-      uint256 tokenBalance = IERC20(token_).balanceOf(address(this));
-      IERC20(token_).transfer(to_, tokenBalance);
-  }
+    function realtimeReward(address user) public view returns (uint256) {
+        uint256 ret;
+        for (uint256 i; i < Stakers[user].stakeCount; i++) {
+            if (
+                !stakersRecord[user][i].withdrawan &&
+                !stakersRecord[user][i].unstaked
+            ) {
+                uint256 val;
+                val = block.timestamp - stakersRecord[user][i].staketime;
+                val = val.mul(stakersRecord[user][i].persecondreward);
+                if (val < stakersRecord[user][i].reward) {
+                    ret += val;
+                } else {
+                    ret += stakersRecord[user][i].reward;
+                }
+            }
+        }
+        return ret;
+    }
 
-  receive() external payable {}
+
+    function SetStakeLimits(uint256 _min, uint256 _max) external onlyowner {
+        minimumStakeToken = _min;
+        maxStakeableToken = _max;
+    }
+
+    function SetStakeDuration(uint256 first, uint256 second, uint256 third, uint256 fourth) external onlyowner {
+        Duration[0] = first;
+        Duration[1] = second;
+        Duration[2] = third;
+        Duration[3] = fourth;
+    }
+
+    function SetStakeBonus(uint256 first, uint256 second, uint256 third, uint256 fourth) external onlyowner {
+        Bonus[0] = first;
+        Bonus[1] = second;
+        Bonus[2] = third;
+        Bonus[3] = fourth;
+    }
+
+
+    function withdrawBNB() public onlyowner {
+        uint256 balance = address(this).balance;
+        require(balance > 0, "does not have any balance");
+        payable(msg.sender).transfer(balance);
+    }
+
+    function initToken(address addr) public onlyowner{
+        token3 = IERC20(addr);
+    }
+    function withdrawToken(uint256 amount) public onlyowner {
+        token3.transfer(msg.sender, amount);
+    }
+
 }
+
